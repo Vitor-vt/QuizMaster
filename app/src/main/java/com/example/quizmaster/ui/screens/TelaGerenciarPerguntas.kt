@@ -4,27 +4,39 @@ package com.example.quizmaster.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.quizmaster.data.local.BancoDeDados
+import com.example.quizmaster.data.local.Pergunta
+import kotlinx.coroutines.launch
 
 @Composable
-fun TelaGerenciarPerguntas(
-    voltar: () -> Unit
-) {
-    var mostrarCadastro by remember { mutableStateOf(false) }
-    var textoPergunta by remember { mutableStateOf("") }
+fun TelaGerenciarPerguntas(voltar: () -> Unit) {
 
-    val perguntas = remember {
-        mutableStateListOf(
-            "Qual é a capital do Brasil?",
-            "Quanto é 5 + 5?",
-            "Qual planeta é conhecido como planeta vermelho?"
-        )
+    val context = LocalContext.current
+    val banco = remember(context) {
+        BancoDeDados.getDatabase(context)
     }
+    val dao = banco.perguntaDao()
+    val perguntas by dao.listarPerguntas()
+        .collectAsState(initial = emptyList())
+
+    val scope = rememberCoroutineScope()
+
+    var mostrarCadastro by remember { mutableStateOf(false) }
+    var texto by remember { mutableStateOf("") }
+    var a by remember { mutableStateOf("") }
+    var b by remember { mutableStateOf("") }
+    var c by remember { mutableStateOf("") }
+    var d by remember { mutableStateOf("") }
+    var correta by remember { mutableIntStateOf(-1) }
 
     Column(
         modifier = Modifier
@@ -32,13 +44,13 @@ fun TelaGerenciarPerguntas(
             .padding(16.dp)
     ) {
         Text(
-            text = "Gerenciar Perguntas",
+            "Gerenciar Perguntas",
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
         Button(
             onClick = { mostrarCadastro = !mostrarCadastro },
@@ -48,62 +60,125 @@ fun TelaGerenciarPerguntas(
         }
 
         if (mostrarCadastro) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = textoPergunta,
-                onValueChange = { textoPergunta = it },
-                label = { Text("Digite a pergunta") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    if (textoPergunta.isNotBlank()) {
-                        perguntas.add(textoPergunta.trim())
-                        textoPergunta = ""
-                        mostrarCadastro = false
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Text("Salvar Pergunta")
-            }
-        }
+                OutlinedTextField(
+                    value = texto,
+                    onValueChange = { texto = it },
+                    label = { Text("Pergunta") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-        Spacer(modifier = Modifier.height(20.dp))
+                listOf(a, b, c, d).forEachIndexed { indice, valor ->
+                    OutlinedTextField(
+                        value = valor,
+                        onValueChange = { novo ->
+                            when (indice) {
+                                0 -> a = novo
+                                1 -> b = novo
+                                2 -> c = novo
+                                3 -> d = novo
+                            }
+                        },
+                        label = {
+                            Text("Alternativa ${'A' + indice}")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-        Text(
-            text = "Perguntas cadastradas",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+                Spacer(Modifier.height(12.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
+                Text("Selecione a resposta correta:")
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(perguntas.toList()) { pergunta ->
-                Card(
+                listOf("A", "B", "C", "D")
+                    .forEachIndexed { indice, letra ->
+                        Row {
+                            RadioButton(
+                                selected = correta == indice,
+                                onClick = { correta = indice }
+                            )
+                            Text(
+                                letra,
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                        }
+                    }
+
+                Button(
+                    onClick = {
+                        if (
+                            texto.isNotBlank() &&
+                            a.isNotBlank() &&
+                            b.isNotBlank() &&
+                            c.isNotBlank() &&
+                            d.isNotBlank() &&
+                            correta in 0..3
+                        ) {
+                            scope.launch {
+                                dao.inserir(
+                                    Pergunta(
+                                        texto = texto.trim(),
+                                        alternativaA = a.trim(),
+                                        alternativaB = b.trim(),
+                                        alternativaC = c.trim(),
+                                        alternativaD = d.trim(),
+                                        respostaCorreta = correta
+                                    )
+                                )
+                                texto = ""
+                                a = ""
+                                b = ""
+                                c = ""
+                                d = ""
+                                correta = -1
+                                mostrarCadastro = false
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Text("Salvar Pergunta")
+                }
+            }
+        } else {
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                "Perguntas cadastradas",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(perguntas, key = { it.id }) { pergunta ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
                     ) {
-                        Text(text = pergunta)
+                        Column(Modifier.padding(16.dp)) {
+                            Text(pergunta.texto)
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextButton(
-                            onClick = {
-                                perguntas.remove(pergunta)
+                            if (pergunta.respostaCorreta == -1) {
+                                Text(
+                                    "Sem alternativas cadastradas",
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
-                        ) {
-                            Text("Excluir")
+
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        dao.excluir(pergunta)
+                                    }
+                                }
+                            ) {
+                                Text("Excluir")
+                            }
                         }
                     }
                 }
