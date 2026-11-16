@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.quizmaster.data.local.BancoDeDados
+import com.example.quizmaster.data.local.BancoDeDadosProvider
 import com.example.quizmaster.data.local.Pergunta
 import kotlinx.coroutines.launch
 
@@ -21,10 +21,15 @@ import kotlinx.coroutines.launch
 fun TelaGerenciarPerguntas(voltar: () -> Unit) {
 
     val context = LocalContext.current
+
     val banco = remember(context) {
-        BancoDeDados.getDatabase(context)
+        BancoDeDadosProvider.obterBanco(context)
     }
-    val dao = banco.perguntaDao()
+
+    val dao = remember(banco) {
+        banco.perguntaDao()
+    }
+
     val perguntas by dao.listarPerguntas()
         .collectAsState(initial = emptyList())
 
@@ -44,7 +49,7 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
             .padding(16.dp)
     ) {
         Text(
-            "Gerenciar Perguntas",
+            text = "Gerenciar Perguntas",
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -53,7 +58,9 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         Button(
-            onClick = { mostrarCadastro = !mostrarCadastro },
+            onClick = {
+                mostrarCadastro = !mostrarCadastro
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Adicionar Pergunta")
@@ -99,10 +106,13 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
                         Row {
                             RadioButton(
                                 selected = correta == indice,
-                                onClick = { correta = indice }
+                                onClick = {
+                                    correta = indice
+                                }
                             )
+
                             Text(
-                                letra,
+                                text = letra,
                                 modifier = Modifier.padding(top = 12.dp)
                             )
                         }
@@ -119,9 +129,9 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
                             correta in 0..3
                         ) {
                             scope.launch {
-                                dao.inserir(
+                                dao.inserirPergunta(
                                     Pergunta(
-                                        texto = texto.trim(),
+                                        enunciado = texto.trim(),
                                         alternativaA = a.trim(),
                                         alternativaB = b.trim(),
                                         alternativaC = c.trim(),
@@ -129,6 +139,7 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
                                         respostaCorreta = correta
                                     )
                                 )
+
                                 texto = ""
                                 a = ""
                                 b = ""
@@ -148,24 +159,31 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Perguntas cadastradas",
+                text = "Perguntas cadastradas",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(perguntas, key = { it.id }) { pergunta ->
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+            ) {
+                items(
+                    items = perguntas,
+                    key = { it.id }
+                ) { pergunta ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                     ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(pergunta.texto)
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(pergunta.enunciado)
 
                             if (pergunta.respostaCorreta == -1) {
                                 Text(
-                                    "Sem alternativas cadastradas",
+                                    text = "Sem alternativas cadastradas",
                                     color = MaterialTheme.colorScheme.error
                                 )
                             }
@@ -173,7 +191,7 @@ fun TelaGerenciarPerguntas(voltar: () -> Unit) {
                             TextButton(
                                 onClick = {
                                     scope.launch {
-                                        dao.excluir(pergunta)
+                                        dao.excluirPergunta(pergunta)
                                     }
                                 }
                             ) {

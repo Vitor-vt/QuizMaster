@@ -9,5 +9,7 @@ object Rotas {
     const val RANKING = "ranking"
     const val HISTORICO = "historico"
     const val ADMIN = "admin"
+
+    const val LOGIN_ADMIN = "login_admin"
     const val GERENCIAR_PERGUNTAS = "gerenciar_perguntas"
 }

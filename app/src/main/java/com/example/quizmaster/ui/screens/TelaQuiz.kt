@@ -12,12 +12,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.quizmaster.data.local.BancoDeDados
-import com.example.quizmaster.ui.viewmodel.QuizViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import com.example.quizmaster.data.local.BancoDeDadosProvider
+import com.example.quizmaster.ui.viewmodel.QuizViewModel
 
 @Composable
 fun TelaQuiz(
@@ -27,10 +26,8 @@ fun TelaQuiz(
     val context = LocalContext.current.applicationContext
 
     val banco = remember(context) {
-        BancoDeDados.getDatabase(context)
+        BancoDeDadosProvider.obterBanco(context)
     }
-
-
 
     val viewModel: QuizViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
@@ -43,7 +40,6 @@ fun TelaQuiz(
         }
     )
 
-
     val estado by viewModel.uiState.collectAsState()
 
     var resultadoEnviado by remember {
@@ -53,6 +49,7 @@ fun TelaQuiz(
     LaunchedEffect(estado.finalizado) {
         if (estado.finalizado && !resultadoEnviado) {
             resultadoEnviado = true
+
             finalizarQuiz(
                 estado.pontuacao,
                 estado.perguntas.size
@@ -105,7 +102,7 @@ fun TelaQuiz(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = pergunta.texto,
+                text = pergunta.enunciado,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
