@@ -18,6 +18,7 @@ import com.example.quizmaster.ui.screens.TelaMenu
 import com.example.quizmaster.ui.screens.TelaQuiz
 import com.example.quizmaster.ui.screens.TelaRanking
 import com.example.quizmaster.ui.screens.TelaResultado
+import com.example.quizmaster.ui.screens.TelaLoginAdmin
 
 @Composable
 fun Navegacao() {
@@ -64,7 +65,7 @@ fun Navegacao() {
                         navController.navigate(Rotas.MENU)
                     },
                     abrirAdmin = {
-                        navController.navigate(Rotas.ADMIN)
+                        navController.navigate(Rotas.LOGIN_ADMIN)
                     }
                 )
             }
@@ -143,6 +144,23 @@ fun Navegacao() {
                     }
                 )
             }
+
+
+            composable(Rotas.LOGIN_ADMIN) {
+                TelaLoginAdmin(
+                    entrar = {
+                        navController.navigate(Rotas.ADMIN) {
+                            popUpTo(Rotas.LOGIN_ADMIN) {
+                                inclusive = true
+                            }
+                        }
+                    },
+                    voltar = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
 
             composable(Rotas.ADMIN) {
                 TelaAdmin(
